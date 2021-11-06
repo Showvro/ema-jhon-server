@@ -24,12 +24,41 @@ async function run() {
     //Database Installation
     const database = client.db("ema_jhon");
     const productCollection = database.collection("products");
+    const orderCollection = database.collection("orders");
 
     //Get Products API
     app.get("/products", async (req, res) => {
+      // console.log(req.query);
       const cursor = productCollection.find({});
-      const products = await cursor.limit(13).toArray();
-      res.send(products);
+      const page = req.query.page;
+      const size = parseInt(req.query.size);
+      let products;
+      const count = await cursor.count();
+      if (page) {
+        products = await cursor
+          .skip(page * size)
+          .limit(size)
+          .toArray();
+      } else {
+        products = await cursor.toArray();
+      }
+      res.send({ count, products });
+    });
+
+    //use post to get data by keys
+    app.post("/products/bykeys", async (req, res) => {
+      const keys = req.body;
+      const query = { key: { $in: keys } };
+      const products = await productCollection.find(query).toArray();
+      res.json(products);
+    });
+
+    //add order api
+    app.post("/orders", async (req, res) => {
+      const orders = req.body;
+      console.log(orders);
+      const result = await orderCollection.insertOne(orders);
+      res.json(result);
     });
   } finally {
     // await client.close()
